@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubAudit — see what your subscriptions really cost</title>
+<meta name="description" content="A private, local-only subscription auditor. See your true monthly & yearly spend, upcoming renewals, and what to cut. Your data never leaves your device.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d12'/%3E%3Crect x='7' y='8' width='13' height='2.4' rx='1.2' fill='%232dd4bf'/%3E%3Crect x='7' y='13' width='10' height='2.4' rx='1.2' fill='%232dd4bf' fill-opacity='.55'/%3E%3Crect x='7' y='18' width='12' height='2.4' rx='1.2' fill='%232dd4bf' fill-opacity='.55'/%3E%3Ccircle cx='21.5' cy='20' r='4.3' fill='none' stroke='%232dd4bf' stroke-width='2'/%3E%3Cline x1='24.6' y1='23.1' x2='27' y2='25.5' stroke='%232dd4bf' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d12; --bg2:#10131b; --panel:#141823; --panel2:#181d29; --line:rgba(140,160,180,.11); --line2:rgba(140,160,180,.2);
+  --txt:#e8eaf0; --dim:#8b93a4; --dim2:#525a6b; --acc:#2dd4bf; --acc-soft:rgba(45,212,191,.1); --acc-line:rgba(45,212,191,.3);
+  --alarm:#ff6b6b; --warn:#f5b13d;
+  --mono:'JetBrains Mono',monospace; --sans:'Inter','Noto Sans SC',-apple-system,sans-serif; --disp:'Sora','Noto Sans SC',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--acc);color:#06251f}
+a{color:var(--acc);text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+.bg-glow{position:fixed;top:-30vh;left:50%;transform:translateX(-50%);width:90vw;height:70vh;z-index:0;pointer-events:none;background:radial-gradient(ellipse,rgba(45,212,191,.06),transparent 62%)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
+
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:11px;font-family:var(--mono);font-size:13px;letter-spacing:.14em}.logo b{font-weight:700}
+.logo span{color:var(--dim)}
+.hdr-r{display:flex;align-items:center;gap:14px}
+.lock{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.08em;display:flex;align-items:center;gap:6px}
+.lock i{width:6px;height:6px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.langs{display:flex;gap:4px}
+.langs button{background:none;border:1px solid var(--line2);color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:.1em;border-radius:20px;padding:4px 9px;transition:.18s}
+.langs button.on{border-color:var(--acc-line);color:var(--acc);background:var(--acc-soft)}
+
+.hero{padding:60px 0 36px;text-align:center}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.32em;color:var(--acc);margin-bottom:20px}
+h1{font-family:var(--disp);font-weight:800;font-size:clamp(32px,5.2vw,58px);line-height:1.08;letter-spacing:-.02em;max-width:760px;margin:0 auto}
+h1 em{font-style:normal;color:var(--acc)}
+.lede{font-size:16px;color:var(--dim);line-height:1.75;max-width:560px;margin:20px auto 0}
+.lede b{color:var(--txt);font-weight:600}
+
+/* dashboard hero number */
+.dash{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:40px 0 0}
+.dcell{background:var(--panel);padding:24px 26px}
+.dcell.hero-num{background:linear-gradient(160deg,rgba(255,107,107,.08),var(--panel) 60%)}
+.dcell .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--dim);margin-bottom:10px;text-transform:uppercase}
+.dcell .big{font-family:var(--disp);font-weight:800;font-size:clamp(30px,4.6vw,46px);line-height:1;letter-spacing:-.02em}
+.dcell.hero-num .big{color:var(--alarm)}
+.dcell .sm{font-family:var(--disp);font-weight:700;font-size:26px}
+.dcell .note{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5}
+@media(max-width:760px){.dash{grid-template-columns:1fr}}
+
+section{padding:40px 0 0}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.sec-h h2{font-family:var(--disp);font-weight:700;font-size:21px}
+.sec-h .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--line2);color:var(--dim);border-radius:8px;padding:7px 11px;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.chip:hover{color:var(--txt);border-color:var(--acc-line)}
+.chip.on{color:var(--acc);border-color:var(--acc-line);background:var(--acc-soft)}
+select.chip,input.chip{outline:none}
+
+/* add form */
+.addform{display:grid;grid-template-columns:1.6fr .8fr .8fr 1fr 1fr 1.1fr auto;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;align-items:center}
+.addform input,.addform select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;color:var(--txt);font-family:var(--sans);font-size:13px;padding:9px 10px;outline:none;min-width:0;width:100%}
+.addform input:focus,.addform select:focus{border-color:var(--acc-line)}
+.addbtn{background:var(--acc);color:#06251f;border:none;border-radius:8px;font-weight:700;font-size:13px;padding:9px 16px;white-space:nowrap}
+.addbtn:hover{filter:brightness(1.08)}
+@media(max-width:880px){.addform{grid-template-columns:1fr 1fr}}
+
+/* table */
+.tbl{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.trow{display:grid;grid-template-columns:1.6fr .9fr 1fr 1.1fr .9fr auto;gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--panel);font-size:13.5px}
+.trow:last-child{border-bottom:none}
+.trow.head{background:var(--bg2);font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--dim2);text-transform:uppercase}
+.trow.paused{opacity:.45}
+.trow .nm{font-weight:600;display:flex;align-items:center;gap:9px}
+.trow .cat{font-size:11px;color:var(--dim);background:var(--bg2);border:1px solid var(--line2);border-radius:20px;padding:2px 9px}
+.trow .mono{font-family:var(--mono)}
+.trow .acts{display:flex;gap:6px;justify-content:flex-end}
+.iconbtn{background:none;border:1px solid var(--line2);color:var(--dim);border-radius:7px;width:30px;height:30px;display:grid;place-items:center;font-size:13px;transition:.15s}
+.iconbtn:hover{color:var(--txt);border-color:var(--acc-line)}
+.iconbtn.del:hover{color:var(--alarm);border-color:rgba(255,107,107,.4)}
+.empty{padding:46px 20px;text-align:center;color:var(--dim2);font-family:var(--mono);font-size:12.5px;background:var(--panel)}
+@media(max-width:760px){.trow{grid-template-columns:1fr 1fr;gap:6px}.trow.head{display:none}.trow .acts{grid-column:span 2;justify-content:flex-start}}
+
+/* two-col lower */
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px}
+@media(max-width:760px){.lower{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.box h3{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--acc);margin-bottom:14px;text-transform:uppercase}
+.up{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.up:last-child{border-bottom:none}
+.up .d{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.up .soon{color:var(--warn)}
+.catbar{margin-bottom:12px}
+.catbar .cr{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.catbar .track{height:7px;background:var(--bg2);border-radius:4px;overflow:hidden}
+.catbar .fill{height:100%;background:var(--acc);border-radius:4px}
+
+.why{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:46px 0 0}
+.why>div{background:var(--bg2);padding:26px 24px}.why h4{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--acc);margin-bottom:12px}.why p{font-size:13.5px;color:var(--dim);line-height:1.8}.why p b{color:var(--txt)}
+@media(max-width:760px){.why{grid-template-columns:1fr}}
+
+footer{border-top:1px solid var(--line);margin-top:54px;padding:26px 0 60px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim2);line-height:2}
+
+.corner-badge{position:fixed;right:16px;bottom:16px;z-index:9999;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;font:500 11px/1 var(--mono);letter-spacing:.14em;backdrop-filter:blur(10px);border:1px solid var(--acc-line);background:rgba(11,13,18,.66);color:#7fe9da}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);z-index:99999;background:var(--acc);color:#06251f;font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px;opacity:0;pointer-events:none;transition:.3s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* edit modal */
+.modal{position:fixed;inset:0;z-index:1000;background:rgba(4,6,10,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.modal .card{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:24px;width:100%;max-width:440px}
+.modal h3{font-family:var(--disp);font-weight:700;font-size:18px;margin-bottom:16px}
+.frow{margin-bottom:12px}.frow label{display:block;font-size:11px;color:var(--dim);margin-bottom:5px;font-family:var(--mono);letter-spacing:.08em}
+.frow input,.frow select{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;color:var(--txt);font-size:14px;padding:10px;outline:none}
+.frow.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal .mbtns{display:flex;gap:10px;margin-top:18px}
+.modal .mbtns button{flex:1;border-radius:8px;padding:11px;font-weight:600;font-size:14px;border:1px solid var(--line2);background:var(--bg2);color:var(--txt)}
+.modal .mbtns .save{background:var(--acc);color:#06251f;border:none}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#141823"/><rect x="7" y="8" width="13" height="2.4" rx="1.2" fill="#2dd4bf"/><rect x="7" y="13" width="10" height="2.4" rx="1.2" fill="#2dd4bf" fill-opacity=".55"/><rect x="7" y="18" width="12" height="2.4" rx="1.2" fill="#2dd4bf" fill-opacity=".55"/><circle cx="21.5" cy="20" r="4.3" fill="none" stroke="#2dd4bf" stroke-width="2"/><line x1="24.6" y1="23.1" x2="27" y2="25.5" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/></svg>
+      <b>SubAudit</b><span data-i="logoSub"></span>
+    </div>
+    <div class="hdr-r">
+      <span class="lock"><i></i><span data-i="lock"></span></span>
+      <div class="langs" id="langs"></div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="kicker" data-i="kicker"></div>
+    <h1 id="h1"></h1>
+    <p class="lede" id="lede"></p>
+    <div class="dash">
+      <div class="dcell hero-num">
+        <div class="lbl" data-i="dTrueYear"></div>
+        <div class="big" id="trueYear">—</div>
+        <div class="note" id="trueYearNote"></div>
+      </div>
+      <div class="dcell">
+        <div class="lbl" data-i="dMonthly"></div>
+        <div class="sm" id="monthlyTot">—</div>
+        <div class="note" id="activeNote"></div>
+      </div>
+      <div class="dcell">
+        <div class="lbl" data-i="dBiggest"></div>
+        <div class="sm" id="biggest">—</div>
+        <div class="note" id="biggestNote"></div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-h">
+      <h2 data-i="yourSubs"></h2>
+      <div class="tools">
+        <select class="chip" id="dispCcy" title="display currency"></select>
+        <select class="chip" id="sortBy"></select>
+        <button class="chip" id="loadSample" data-i="loadSample"></button>
+      </div>
+    </div>
+
+    <div class="addform">
+      <input id="f-name" type="text" data-ph="phName">
+      <input id="f-amount" type="number" min="0" step="0.01" data-ph="phAmount">
+      <select id="f-ccy"></select>
+      <select id="f-cycle"></select>
+      <input id="f-anchor" type="date">
+      <input id="f-cat" type="text" data-ph="phCat">
+      <button class="addbtn" id="addBtn" data-i="add"></button>
+    </div>
+
+    <div class="tbl" id="tbl"></div>
+  </section>
+
+  <div class="lower">
+    <div class="box">
+      <h3 data-i="upcoming"></h3>
+      <div id="upcoming"></div>
+    </div>
+    <div class="box">
+      <h3 data-i="byCat"></h3>
+      <div id="cats"></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-h"><h2 data-i="dataTitle"></h2>
+      <div class="tools">
+        <button class="chip" id="expJson">JSON ↓</button>
+        <button class="chip" id="expCsv">CSV ↓</button>
+        <button class="chip" id="impBtn" data-i="import"></button>
+        <input type="file" id="impFile" accept=".json,.csv" style="display:none">
+        <button class="chip" id="clearAll" data-i="clearAll"></button>
+      </div>
+    </div>
+    <p style="color:var(--dim);font-size:13px;line-height:1.7" data-i="dataNote"></p>
+  </section>
+
+  <div class="why" id="why"></div>
+  <footer id="foot"></footer>
+</div>
+
+<div class="corner-badge"><svg width="13" height="13" viewBox="0 0 32 32"><rect x="6" y="9" width="13" height="2.6" rx="1.3" fill="#2dd4bf"/><rect x="6" y="15" width="9" height="2.6" rx="1.3" fill="#2dd4bf" fill-opacity=".5"/><circle cx="22" cy="20" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2"/><line x1="25.5" y1="23.5" x2="28" y2="26" stroke="#2dd4bf" stroke-width="2.2" stroke-linecap="round"/></svg><span>SUBAUDIT</span></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="modal">
+  <div class="card">
+    <h3 data-i="editTitle"></h3>
+    <div class="frow"><label data-i="phName"></label><input id="e-name" type="text"></div>
+    <div class="frow two"><div><label data-i="phAmount"></label><input id="e-amount" type="number" min="0" step="0.01"></div><div><label data-i="ccy"></label><select id="e-ccy"></select></div></div>
+    <div class="frow two"><div><label data-i="cycle"></label><select id="e-cycle"></select></div><div><label data-i="anchor"></label><input id="e-anchor" type="date"></div></div>
+    <div class="frow"><label data-i="phCat"></label><input id="e-cat" type="text"></div>
+    <div class="mbtns"><button id="e-cancel" data-i="cancel"></button><button class="save" id="e-save" data-i="save"></button></div>
+  </div>
+</div>
+
+<script type="module" src="engine.js"></script>
+<script type="module" src="app.js?v=3"></script>
+</body>
+</html>
