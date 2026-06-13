@@ -28,6 +28,7 @@
       sortMonthly:"Sort: cost ↓", sortName:"Sort: name", sortNext:"Sort: next renewal",
       none:"No subscriptions yet — add one above, or load the sample.",
       noUp:"Nothing due in the next 30 days.",
+      xiaomo:"Surprised? That's okay — now you can gently take back control.",
       foot:"SubAudit · 100% local, zero upload · your financial data never leaves this device · 0017",
       why:[{h:"The pain",p:"<b>41% of people</b> have subscription fatigue and spend ~<b>$219/mo</b> on subscriptions while guessing ~$86. The money leaks because nothing shows the true total."},
            {h:"Local-only, on purpose",p:"Your subscriptions and amounts are <b>financial data</b>. They stay in your browser — no account, no cloud, no upload. Works offline."},
@@ -50,6 +51,7 @@
       sortMonthly:"排序：花费 ↓", sortName:"排序：名称", sortNext:"排序：续费日",
       none:"还没有订阅——在上方添加一条，或载入示例。",
       noUp:"未来 30 天没有要续费的。",
+      xiaomo:"有点意外吧？没关系，现在你能慢慢拿回主动权了。",
       foot:"订阅审计 · 100% 本地、零上传 · 你的财务数据从不离开本设备 · 0017",
       why:[{h:"痛点",p:"<b>41% 的人</b>有订阅疲劳、每月在订阅上花约 <b>¥1500</b>，却以为只花 ¥600。钱在漏，因为没人告诉你真实总额。"},
            {h:"故意做成纯本地",p:"你的订阅和金额是<b>财务数据</b>。它们只留在你浏览器里——无账号、无云端、零上传，断网也能用。"},
@@ -72,6 +74,7 @@
       sortMonthly:"Сорт: ціна ↓", sortName:"Сорт: назва", sortNext:"Сорт: поновлення",
       none:"Ще немає підписок — додайте вище або завантажте приклад.",
       noUp:"Нічого не списується найближчі 30 днів.",
+      xiaomo:"Здивовані? Нічого — тепер можна м'яко повернути контроль.",
       foot:"SubAudit · 100% локально, без завантажень · фінансові дані не покидають пристрій · 0017",
       why:[{h:"Проблема",p:"<b>41% людей</b> мають втому від підписок і витрачають ~<b>$219/міс</b>, гадаючи що ~$86. Гроші течуть, бо ніщо не показує справжню суму."},
            {h:"Лише локально — навмисно",p:"Ваші підписки та суми — це <b>фінансові дані</b>. Вони лишаються у браузері: без акаунта, без хмари, без завантажень. Працює офлайн."},
@@ -180,6 +183,7 @@
     document.querySelectorAll("[data-i]").forEach(el=>{ const k=el.getAttribute("data-i"); if(T()[k]!=null) el.innerHTML=T()[k]; });
     document.querySelectorAll("[data-ph]").forEach(el=>{ const k=el.getAttribute("data-ph"); if(T()[k]!=null) el.placeholder=T()[k]; });
     $("h1").innerHTML=T().h1; $("lede").innerHTML=T().lede; $("foot").textContent=T().foot;
+    $("xiaomoLine").innerHTML = esc(T().xiaomo)+' <b>♡ 小茉</b>';
     $("why").innerHTML=T().why.map(w=>`<div><h4>${esc(w.h)}</h4><p>${w.p}</p></div>`).join("");
     // langs
     $("langs").innerHTML=["zh","en","uk"].map(l=>`<button class="${l===lang?'on':''}" data-l="${l}">${l==='zh'?'中文':l==='en'?'EN':'УК'}</button>`).join("");
